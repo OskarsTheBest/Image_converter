@@ -13,10 +13,15 @@ public:
 	~Window();
 
 	bool ProcessMessages();
-
+	void CreateMenuBar();
+	void AddControls();
 private:
 	// creating hwindows instance w32
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;
+	HMENU hMenu;
+	HMENU hFileMenu;
+	HMENU hEditMenu;
+	HMENU hOpenSubMenu;
 };
 

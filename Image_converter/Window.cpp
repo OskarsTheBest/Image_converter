@@ -3,12 +3,29 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
+	case WM_COMMAND:
+
+		switch (wParam)
+		{
+		case 1:
+			MessageBeep(MB_ICONINFORMATION);
+			break;
+		case 2:
+
+		case 4:
+			DestroyWindow(hWnd);
+			break;
+		}
+		
+
+		break;
 	case WM_CLOSE:
 		DestroyWindow(hWnd);
 		break;
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		return 0;
+
 	}
 
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
@@ -55,7 +72,8 @@ Window::Window()
 		m_hInstance,
 		NULL
 	);
-
+	CreateMenuBar();
+	AddControls();
 	ShowWindow(m_hWnd, SW_SHOW);
 }
 
@@ -87,5 +105,41 @@ bool Window::ProcessMessages()
 	}
 	return true;
 }
+
+void Window::CreateMenuBar()
+{
+	hMenu = CreateMenu();
+	hFileMenu = CreateMenu();
+	hEditMenu = CreateMenu();
+	hOpenSubMenu = CreateMenu();
+
+	AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"File");
+
+	AppendMenu(hFileMenu, MF_STRING, 1, L"New");
+
+	AppendMenu(hFileMenu, MF_POPUP, (UINT_PTR)hOpenSubMenu, L"Open");
+	AppendMenu(hOpenSubMenu, MF_STRING, NULL, L"SubMenu Item");
+
+	AppendMenu(hFileMenu, MF_STRING, 3, L"Save");
+	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
+	AppendMenu(hFileMenu, MF_STRING, 4, L"Exit");
+
+
+	AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hEditMenu, L"Edit");
+
+	AppendMenu(hEditMenu, MF_STRING, 5, L"Cut");
+	AppendMenu(hEditMenu, MF_STRING, 6, L"Copy");
+	AppendMenu(hEditMenu, MF_STRING, 7, L"Paste");
+
+	AppendMenu(hMenu, MF_POPUP, 8, L"Help");
+
+	SetMenu(m_hWnd, hMenu);
+}
+
+void Window::AddControls()
+{
+	HWND hStatic = CreateWindowEx(0, L"static", L"Enter text here:", WS_VISIBLE | WS_CHILD, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
+}
+
 
 
