@@ -1,4 +1,6 @@
 #include "Window.h"
+#include <commdlg.h>
+#include <map>
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
@@ -15,8 +17,12 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case 4:
 			DestroyWindow(hWnd);
 			break;
+		case 10:
+			open_file(hWnd);
+			break;
 		}
 		
+
 
 		break;
 	case WM_CLOSE:
@@ -30,6 +36,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	return DefWindowProc(hWnd, uMsg, wParam, lParam);
 }
+
+
 Window::Window()
 	: m_hInstance(GetModuleHandle(nullptr))
 {
@@ -62,7 +70,7 @@ Window::Window()
 		0,
 		L"IMAGE WINDOW CLASS",
 		L"Title",
-		style,
+		style, 
 		rect.left,
 		rect.top,
 		rect.right - rect.left, // to get the adjusted height
@@ -72,6 +80,7 @@ Window::Window()
 		m_hInstance,
 		NULL
 	);
+	windowMap[m_hWnd] = this; // Store the mapping between HWND and Window instance
 	CreateMenuBar();
 	AddControls();
 	ShowWindow(m_hWnd, SW_SHOW);
@@ -138,8 +147,41 @@ void Window::CreateMenuBar()
 
 void Window::AddControls()
 {
-	HWND hStatic = CreateWindowEx(0, L"static", L"Enter text here:", WS_VISIBLE | WS_CHILD, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
+	HWND hStatic = CreateWindowEx(0, L"static", L"Paste your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
+	HWND hEdit = CreateWindowEx(0, L"Edit", L"Browse", WS_VISIBLE | WS_CHILD , 200, 152, 100, 50, m_hWnd, (HMENU)10, m_hInstance, NULL);
+
+
 }
 
+void open_file(HWND hWnd) {
+	OPENFILENAME ofn;
 
+	char file_name[100];
 
+	ZeroMemory(&ofn, sizeof(OPENFILENAME));
+
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	ofn.hwndOwner = hWnd;
+	ofn.lpstrFile = file_name;
+	ofn.lpstrFile[0] = '\0';
+	ofn.nMaxFile = 100;
+	ofn.lpstrFilter = "All files\0*.*\0Source Files\0*.CPP\0Text Files\0*.TXT\0";
+	ofn.nFilterIndex = 1;
+
+	GetOpenFileName(&ofn);
+
+	display_file(ofn.lpstrFile);
+}
+
+void display_file(char* path) {
+	FILE* file;
+	file = fopen(path, "rb");
+	fseek(file, 0, SEEK_END);
+	int _size = ftell(file);
+	rewind(file);
+	char* data = new char(_size + 1);
+	fread(data, _size, 1, file);
+	data[_size] = '\0';
+
+	SetWindowText(hEdit, data);
+}

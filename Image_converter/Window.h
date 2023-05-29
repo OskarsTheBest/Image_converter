@@ -1,8 +1,8 @@
 #pragma once
-
+#include <map>
 #include <Windows.h>
 
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
 
 class Window
 {
@@ -15,7 +15,11 @@ public:
 	bool ProcessMessages();
 	void CreateMenuBar();
 	void AddControls();
+	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+	LRESULT OpenButtonProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
+	// global map init
+	static std::map<HWND, Window*> windowMap;
 	// creating hwindows instance w32
 	HINSTANCE m_hInstance;
 	HWND m_hWnd;
