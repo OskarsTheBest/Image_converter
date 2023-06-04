@@ -1,187 +1,202 @@
-#include "Window.h"
+#include <Windows.h>
 #include <commdlg.h>
 #include <map>
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+void open_file(HWND hWnd);
+
+class Window
 {
-	switch (uMsg)
-	{
-	case WM_COMMAND:
+public:
+    Window();
+    ~Window();
+    bool ProcessMessages();
 
-		switch (wParam)
-		{
-		case 1:
-			MessageBeep(MB_ICONINFORMATION);
-			break;
-		case 2:
+private:
+    HINSTANCE m_hInstance;
+    HWND m_hWnd;
+    HMENU hMenu;
+    HMENU hFileMenu;
+    HMENU hEditMenu;
+    HMENU hOpenSubMenu;
 
-		case 4:
-			DestroyWindow(hWnd);
-			break;
-		case 10:
-			open_file(hWnd);
-			break;
-		}
-		
+    void CreateMenuBar();
+    void AddControls();
+};
 
+std::map<HWND, Window*> windowMap;
 
-		break;
-	case WM_CLOSE:
-		DestroyWindow(hWnd);
-		break;
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+{
+    Window window;
 
-	}
+    while (window.ProcessMessages())
+    {
+        // Main message loop
+    }
 
-	return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    return 0;
 }
 
+LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case 1:
+            MessageBeep(MB_ICONINFORMATION);
+            break;
+        case 2:
+            break;
+        case 3:
+            DestroyWindow(hWnd);
+            break;
+        case 10:
+            open_file(hWnd);
+            break;
+        }
+        break;
+
+    case WM_CLOSE:
+        DestroyWindow(hWnd);
+        break;
+
+    case WM_DESTROY:
+        windowMap.erase(hWnd);
+        PostQuitMessage(0);
+        return 0;
+    }
+
+    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+}
+
+void open_file(HWND hWnd)
+{
+    OPENFILENAME ofn;
+    wchar_t file_name[100];
+
+    ZeroMemory(&ofn, sizeof(OPENFILENAME));
+    ofn.lStructSize = sizeof(OPENFILENAME);
+    ofn.hwndOwner = hWnd;
+    ofn.lpstrFile = file_name;
+    ofn.lpstrFile[0] = L'\0';
+    ofn.nMaxFile = 100;
+    ofn.lpstrFilter = L"All files\0*.*\0Source Files\0*.CPP\0Text Files\0*.TXT\0";
+    ofn.nFilterIndex = 1;
+
+    GetOpenFileName(&ofn);
+
+    // Display the selected file path (optional)
+    MessageBox(hWnd, ofn.lpstrFile, L"Selected File", MB_OK);
+}
 
 Window::Window()
-	: m_hInstance(GetModuleHandle(nullptr))
+    : m_hInstance(GetModuleHandle(nullptr))
 {
-	const wchar_t* CLASS_NAME = L"IMAGE WINDOW CLASS";
+    const wchar_t* CLASS_NAME = L"IMAGE_WINDOW_CLASS";
 
-	WNDCLASS wndClass = {};
-	wndClass.lpszClassName = CLASS_NAME;
-	wndClass.hInstance = m_hInstance;
-	wndClass.hIcon = LoadIcon(NULL, IDI_WINLOGO);
-	wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wndClass.lpfnWndProc = WindowProc;
+    WNDCLASS wndClass = {};
+    wndClass.style = CS_HREDRAW | CS_VREDRAW;
+    wndClass.lpfnWndProc = WindowProc;
+    wndClass.hInstance = m_hInstance;
+    wndClass.hIcon = LoadIcon(NULL, IDI_WINLOGO);
+    wndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wndClass.lpszClassName = CLASS_NAME;
 
-	RegisterClass(&wndClass);
+    RegisterClass(&wndClass);
 
-	DWORD style = WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
+    DWORD style = WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
 
-	int width = 640;
-	int height = 480;
+    int width = 640;
+    int height = 480;
 
-	// window dimensions
-	RECT rect;
-	rect.left = 250; // where the box on screen appears
-	rect.top = 250;
-	rect.right = rect.left + width;
-	rect.bottom = rect.top + height;
+    RECT rect;
+    rect.left = 250;
+    rect.top = 250;
+    rect.right = rect.left + width;
+    rect.bottom = rect.top + height;
 
-	AdjustWindowRect(&rect, style, false);
+    AdjustWindowRect(&rect, style, false);
 
-	m_hWnd = CreateWindowEx(
-		0,
-		L"IMAGE WINDOW CLASS",
-		L"Title",
-		style, 
-		rect.left,
-		rect.top,
-		rect.right - rect.left, // to get the adjusted height
-		rect.bottom -rect.top,
-		NULL,
-		NULL, // can be used for menus
-		m_hInstance,
-		NULL
-	);
-	windowMap[m_hWnd] = this; // Store the mapping between HWND and Window instance
-	CreateMenuBar();
-	AddControls();
-	ShowWindow(m_hWnd, SW_SHOW);
+    m_hWnd = CreateWindowEx(
+        0,
+        CLASS_NAME,
+        L"Title",
+        style,
+        rect.left,
+        rect.top,
+        rect.right - rect.left,
+        rect.bottom - rect.top,
+        NULL,
+        NULL,
+        m_hInstance,
+        NULL
+    );
+
+    windowMap[m_hWnd] = this;
+    CreateMenuBar();
+    AddControls();
+    ShowWindow(m_hWnd, SW_SHOW);
 }
 
 Window::~Window()
 {
-	const wchar_t* CLASS_NAME = L"IMAGE WINDOW CLASS";
-
-	UnregisterClass(CLASS_NAME, m_hInstance);
+    const wchar_t* CLASS_NAME = L"IMAGE_WINDOW_CLASS";
+    UnregisterClass(CLASS_NAME, m_hInstance);
 }
 
 bool Window::ProcessMessages()
 {
-	MSG msg = {
+    MSG msg;
+    while (PeekMessage(&msg, nullptr, 0u, 0u, PM_REMOVE))
+    {
+        if (msg.message == WM_QUIT)
+        {
+            return false;
+        }
 
-	};
-	while (PeekMessage(&msg, nullptr, 0u, 0u, PM_REMOVE)) 
-	{
-		if (msg.message == WM_QUIT)
-		{
-			return false;
-		}
-		
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-	}
-	if (!IsWindow(m_hWnd))
-	{
-		return false;
-	}
-	return true;
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    if (!IsWindow(m_hWnd))
+    {
+        return false;
+    }
+
+    return true;
 }
 
 void Window::CreateMenuBar()
 {
-	hMenu = CreateMenu();
-	hFileMenu = CreateMenu();
-	hEditMenu = CreateMenu();
-	hOpenSubMenu = CreateMenu();
+    hMenu = CreateMenu();
+    hFileMenu = CreateMenu();
+    hEditMenu = CreateMenu();
+    hOpenSubMenu = CreateMenu();
 
-	AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"File");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, L"File");
+    AppendMenu(hFileMenu, MF_STRING, 1, L"New");
+    AppendMenu(hFileMenu, MF_POPUP, (UINT_PTR)hOpenSubMenu, L"Open");
+    AppendMenu(hOpenSubMenu, MF_STRING, NULL, L"SubMenu Item");
+    AppendMenu(hFileMenu, MF_STRING, 3, L"Save");
+    AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
+    AppendMenu(hFileMenu, MF_STRING, 4, L"Exit");
 
-	AppendMenu(hFileMenu, MF_STRING, 1, L"New");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hEditMenu, L"Edit");
+    AppendMenu(hEditMenu, MF_STRING, 5, L"Cut");
+    AppendMenu(hEditMenu, MF_STRING, 6, L"Copy");
+    AppendMenu(hEditMenu, MF_STRING, 7, L"Paste");
 
-	AppendMenu(hFileMenu, MF_POPUP, (UINT_PTR)hOpenSubMenu, L"Open");
-	AppendMenu(hOpenSubMenu, MF_STRING, NULL, L"SubMenu Item");
+    AppendMenu(hMenu, MF_POPUP, 8, L"Help");
 
-	AppendMenu(hFileMenu, MF_STRING, 3, L"Save");
-	AppendMenu(hFileMenu, MF_SEPARATOR, NULL, NULL);
-	AppendMenu(hFileMenu, MF_STRING, 4, L"Exit");
-
-
-	AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hEditMenu, L"Edit");
-
-	AppendMenu(hEditMenu, MF_STRING, 5, L"Cut");
-	AppendMenu(hEditMenu, MF_STRING, 6, L"Copy");
-	AppendMenu(hEditMenu, MF_STRING, 7, L"Paste");
-
-	AppendMenu(hMenu, MF_POPUP, 8, L"Help");
-
-	SetMenu(m_hWnd, hMenu);
+    SetMenu(m_hWnd, hMenu);
 }
 
 void Window::AddControls()
 {
-	HWND hStatic = CreateWindowEx(0, L"static", L"Paste your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
-	HWND hEdit = CreateWindowEx(0, L"Edit", L"Browse", WS_VISIBLE | WS_CHILD , 200, 152, 100, 50, m_hWnd, (HMENU)10, m_hInstance, NULL);
-
-
-}
-
-void open_file(HWND hWnd) {
-	OPENFILENAME ofn;
-
-	char file_name[100];
-
-	ZeroMemory(&ofn, sizeof(OPENFILENAME));
-
-	ofn.lStructSize = sizeof(OPENFILENAME);
-	ofn.hwndOwner = hWnd;
-	ofn.lpstrFile = file_name;
-	ofn.lpstrFile[0] = '\0';
-	ofn.nMaxFile = 100;
-	ofn.lpstrFilter = "All files\0*.*\0Source Files\0*.CPP\0Text Files\0*.TXT\0";
-	ofn.nFilterIndex = 1;
-
-	GetOpenFileName(&ofn);
-
-	display_file(ofn.lpstrFile);
-}
-
-void display_file(char* path) {
-	FILE* file;
-	file = fopen(path, "rb");
-	fseek(file, 0, SEEK_END);
-	int _size = ftell(file);
-	rewind(file);
-	char* data = new char(_size + 1);
-	fread(data, _size, 1, file);
-	data[_size] = '\0';
-
-	SetWindowText(hEdit, data);
+    HWND hStatic = CreateWindowEx(0, L"static", L"Paste your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
+    HWND hButton = CreateWindowEx(0, L"button", L"Browse", WS_VISIBLE | WS_CHILD, 200, 152, 100, 50, m_hWnd, (HMENU)10, m_hInstance, NULL);
 }
