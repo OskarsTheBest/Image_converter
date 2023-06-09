@@ -3,7 +3,7 @@
 #include <Windows.h>
 
 
-
+BOOL CopyFileToClipboard(HWND hWnd);
 class Window
 {
 public:

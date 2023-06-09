@@ -5,6 +5,9 @@
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void open_file(HWND hWnd);
+BOOL CopyFileToClipboard(HWND hWnd);
+BOOL PasteFileFromClipboard(HWND hWnd);
+BOOL CutFileFromClipboard(HWND hWnd);
 
 class Window
 {
@@ -54,6 +57,16 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case 3:
             DestroyWindow(hWnd);
             break;
+        case 5:
+            CutFileFromClipboard(hWnd);
+            break;
+        case 6:
+            CopyFileToClipboard(hWnd);
+            break;
+        case 7:
+            PasteFileFromClipboard(hWnd);
+            break;
+
         case 10:
             open_file(hWnd);
             break;
@@ -198,5 +211,175 @@ void Window::CreateMenuBar()
 void Window::AddControls()
 {
     HWND hStatic = CreateWindowEx(0, L"static", L"Paste your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
+    HWND hEdit = CreateWindowEx(0, L"Edit", L"Edit text here ...", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE, 200, 252, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
     HWND hButton = CreateWindowEx(0, L"button", L"Browse", WS_VISIBLE | WS_CHILD, 200, 152, 100, 50, m_hWnd, (HMENU)10, m_hInstance, NULL);
+}
+
+BOOL CopyFileToClipboard(HWND hWnd)
+{
+    if (!OpenClipboard(hWnd))
+    {
+        MessageBox(hWnd, L"Failed to open clipboard.", L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+
+    if (!EmptyClipboard())
+    {
+        MessageBox(hWnd, L"Failed to empty clipboard.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
+    {
+        MessageBox(hWnd, L"No marked text available for copying.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    if (!OpenClipboard(hWnd))
+    {
+        MessageBox(hWnd, L"Failed to open clipboard.", L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+
+    HANDLE hClipboardData = GetClipboardData(CF_UNICODETEXT);
+    if (hClipboardData == NULL)
+    {
+        MessageBox(hWnd, L"Failed to get clipboard data.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    wchar_t* lpClipboardText = (wchar_t*)GlobalLock(hClipboardData);
+    if (lpClipboardText == NULL)
+    {
+        MessageBox(hWnd, L"Failed to lock clipboard data.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    size_t clipboardTextLength = wcslen(lpClipboardText);
+    HGLOBAL hCopyData = GlobalAlloc(GMEM_MOVEABLE, (clipboardTextLength + 1) * sizeof(wchar_t));
+    if (hCopyData == NULL)
+    {
+        MessageBox(hWnd, L"Failed to allocate memory for copy data.", L"Error", MB_OK | MB_ICONERROR);
+        GlobalUnlock(hClipboardData);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    wchar_t* lpCopyData = (wchar_t*)GlobalLock(hCopyData);
+    if (lpCopyData == NULL)
+    {
+        MessageBox(hWnd, L"Failed to lock copy data.", L"Error", MB_OK | MB_ICONERROR);
+        GlobalUnlock(hClipboardData);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    wcscpy_s(lpCopyData, clipboardTextLength + 1, lpClipboardText);
+
+    GlobalUnlock(hCopyData);
+    GlobalUnlock(hClipboardData);
+
+    if (!SetClipboardData(CF_UNICODETEXT, hCopyData))
+    {
+        MessageBox(hWnd, L"Failed to set clipboard data.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    CloseClipboard();
+
+    MessageBox(hWnd, L"Text copied to clipboard.", L"Success", MB_OK | MB_ICONINFORMATION);
+
+    return TRUE;
+}
+
+BOOL PasteFileFromClipboard(HWND hWnd)
+{
+    if (!OpenClipboard(hWnd))
+    {
+        MessageBox(hWnd, L"Failed to open clipboard.", L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+
+    if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
+    {
+        MessageBox(hWnd, L"No text available for pasting.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    HANDLE hClipboardData = GetClipboardData(CF_UNICODETEXT);
+    if (hClipboardData == NULL)
+    {
+        MessageBox(hWnd, L"Failed to get clipboard data.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    wchar_t* lpClipboardText = (wchar_t*)GlobalLock(hClipboardData);
+    if (lpClipboardText == NULL)
+    {
+        MessageBox(hWnd, L"Failed to lock clipboard data.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    // Do something with the pasted text
+
+    GlobalUnlock(hClipboardData);
+    CloseClipboard();
+
+    MessageBox(hWnd, L"Text pasted from clipboard.", L"Success", MB_OK | MB_ICONINFORMATION);
+
+    return TRUE;
+}
+
+BOOL CutFileToClipboard(HWND hWnd)
+{
+    return 0;
+}
+
+BOOL CutFileFromClipboard(HWND hWnd)
+{
+    if (!OpenClipboard(hWnd))
+    {
+        MessageBox(hWnd, L"Failed to open clipboard.", L"Error", MB_OK | MB_ICONERROR);
+        return FALSE;
+    }
+
+    if (!IsClipboardFormatAvailable(CF_UNICODETEXT))
+    {
+        MessageBox(hWnd, L"No text available for cutting.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    HANDLE hClipboardData = GetClipboardData(CF_UNICODETEXT);
+    if (hClipboardData == NULL)
+    {
+        MessageBox(hWnd, L"Failed to get clipboard data.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    wchar_t* lpClipboardText = (wchar_t*)GlobalLock(hClipboardData);
+    if (lpClipboardText == NULL)
+    {
+        MessageBox(hWnd, L"Failed to lock clipboard data.", L"Error", MB_OK | MB_ICONERROR);
+        CloseClipboard();
+        return FALSE;
+    }
+
+    // Do something with the cut text
+
+    GlobalUnlock(hClipboardData);
+    CloseClipboard();
+
+    MessageBox(hWnd, L"Text cut from clipboard.", L"Success", MB_OK | MB_ICONINFORMATION);
+
+    return TRUE;
 }
