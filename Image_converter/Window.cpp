@@ -1,6 +1,8 @@
 #include <Windows.h>
 #include <commdlg.h>
 #include <map>
+#include <string>
+
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
@@ -8,7 +10,7 @@ void open_file(HWND hWnd);
 BOOL CopyFileToClipboard(HWND hWnd);
 BOOL PasteFileFromClipboard(HWND hWnd);
 BOOL CutFileFromClipboard(HWND hWnd);
-
+HWND hPictureControl;
 class Window
 {
 public:
@@ -97,13 +99,24 @@ void open_file(HWND hWnd)
     ofn.lpstrFile = file_name;
     ofn.lpstrFile[0] = L'\0';
     ofn.nMaxFile = 100;
-    ofn.lpstrFilter = L"All files\0*.*\0Source Files\0*.CPP\0Text Files\0*.TXT\0";
+    ofn.lpstrFilter = L"bmp\0*.bmp;*.jpg;*.png\0All Files\0*.*\0";
     ofn.nFilterIndex = 1;
 
     GetOpenFileName(&ofn);
 
-    // Display the selected file path (optional)
-    MessageBox(hWnd, ofn.lpstrFile, L"Selected File", MB_OK);
+    if (ofn.nFileOffset == 0){
+        MessageBox(hWnd, L"Failed to select File", L"Error", MB_OK | MB_ICONERROR);
+    }
+    else {
+        HBITMAP hBitmap = (HBITMAP)LoadImage(NULL, ofn.lpstrFile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+
+        if (hBitmap == NULL) {
+            MessageBox(hWnd, L"Failed to load image using Bitmap", L"Error", MB_OK | MB_ICONERROR);
+        }
+        else {
+            SendMessage(hPictureControl, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
+        }
+    }
 }
 
 Window::Window()
@@ -213,6 +226,7 @@ void Window::AddControls()
     HWND hStatic = CreateWindowEx(0, L"static", L"Paste your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
     HWND hEdit = CreateWindowEx(0, L"Edit", L"Edit text here ...", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE, 200, 252, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
     HWND hButton = CreateWindowEx(0, L"button", L"Browse", WS_VISIBLE | WS_CHILD, 200, 152, 100, 50, m_hWnd, (HMENU)10, m_hInstance, NULL);
+    HWND hPictureControl = CreateWindowEx(0, L"static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_CENTERIMAGE, 200, 202, 100, 100, m_hWnd, NULL, m_hInstance, NULL);
 }
 
 BOOL CopyFileToClipboard(HWND hWnd)
@@ -338,10 +352,6 @@ BOOL PasteFileFromClipboard(HWND hWnd)
     return TRUE;
 }
 
-BOOL CutFileToClipboard(HWND hWnd)
-{
-    return 0;
-}
 
 BOOL CutFileFromClipboard(HWND hWnd)
 {
