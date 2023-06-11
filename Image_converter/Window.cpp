@@ -2,6 +2,7 @@
 #include <commdlg.h>
 #include <map>
 #include <string>
+#include <opencv2/opencv.hpp>
 
 
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -82,10 +83,13 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         windowMap.erase(hWnd);
         PostQuitMessage(0);
-        return 0;
-    }
+        break;
 
-    return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    default:
+        return DefWindowProc(hWnd, uMsg, wParam, lParam);
+    }
+    return 0;
+
 }
 
 void open_file(HWND hWnd)
@@ -104,20 +108,53 @@ void open_file(HWND hWnd)
 
     GetOpenFileName(&ofn);
 
-    if (ofn.nFileOffset == 0){
+    if (ofn.nFileOffset == 0) {
         MessageBox(hWnd, L"Failed to select File", L"Error", MB_OK | MB_ICONERROR);
     }
     else {
-        HBITMAP hBitmap = (HBITMAP)LoadImage(NULL, ofn.lpstrFile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+        HBITMAP hBitmap = (HBITMAP)LoadImage(NULL, ofn.lpstrFile, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
 
         if (hBitmap == NULL) {
-            MessageBox(hWnd, L"Failed to load image using Bitmap", L"Error", MB_OK | MB_ICONERROR);
+            DWORD error = GetLastError();
+            LPWSTR errorText = nullptr;
+            FormatMessage(
+                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL,
+                error,
+                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                (LPWSTR)&errorText,
+                0,
+                NULL
+            );
+            MessageBox(hWnd, errorText, L"Error", MB_OK | MB_ICONERROR);
+            LocalFree(errorText);
         }
         else {
-            SendMessage(hPictureControl, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBitmap);
+            // Convert HBITMAP to cv::Mat
+            BITMAP bm;
+            GetObject(hBitmap, sizeof(BITMAP), &bm);
+            HDC hdc = GetDC(NULL);
+            HDC hdcMem = CreateCompatibleDC(hdc);
+            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMem, hBitmap);
+            cv::Mat image(bm.bmHeight, bm.bmWidth, CV_8UC3);
+            for (int y = 0; y < bm.bmHeight; ++y) {
+                for (int x = 0; x < bm.bmWidth; ++x) {
+                    COLORREF color = GetPixel(hdcMem, x, y);
+                    image.at<cv::Vec3b>(y, x) = cv::Vec3b(GetBValue(color), GetGValue(color), GetRValue(color));
+                }
+            }
+            SelectObject(hdcMem, hOldBitmap);
+            DeleteDC(hdcMem);
+            ReleaseDC(NULL, hdc);
+
+            // Display the image using OpenCV
+            cv::namedWindow("Image", cv::WINDOW_NORMAL);
+            cv::imshow("Image", image);
+            cv::waitKey(0);
         }
     }
 }
+
 
 Window::Window()
     : m_hInstance(GetModuleHandle(nullptr))
@@ -177,6 +214,7 @@ Window::~Window()
 bool Window::ProcessMessages()
 {
     MSG msg;
+
     while (PeekMessage(&msg, nullptr, 0u, 0u, PM_REMOVE))
     {
         if (msg.message == WM_QUIT)
@@ -223,11 +261,12 @@ void Window::CreateMenuBar()
 
 void Window::AddControls()
 {
-    HWND hStatic = CreateWindowEx(0, L"static", L"Paste your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
+    HWND hStatic = CreateWindowEx(0, L"static", L"Open your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
     HWND hEdit = CreateWindowEx(0, L"Edit", L"Edit text here ...", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE, 200, 252, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
     HWND hButton = CreateWindowEx(0, L"button", L"Browse", WS_VISIBLE | WS_CHILD, 200, 152, 100, 50, m_hWnd, (HMENU)10, m_hInstance, NULL);
-    HWND hPictureControl = CreateWindowEx(0, L"static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_CENTERIMAGE, 200, 202, 100, 100, m_hWnd, NULL, m_hInstance, NULL);
+    hPictureControl = CreateWindowEx(0, L"static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_CENTERIMAGE, 200, 202, 100, 100, m_hWnd, NULL, m_hInstance, NULL);
 }
+
 
 BOOL CopyFileToClipboard(HWND hWnd)
 {
