@@ -8,10 +8,12 @@
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 void open_file(HWND hWnd);
+void ShowHelpContent(HWND hWnd);
 BOOL CopyFileToClipboard(HWND hWnd);
 BOOL PasteFileFromClipboard(HWND hWnd);
 BOOL CutFileFromClipboard(HWND hWnd);
 HWND hPictureControl;
+HWND hLogo;
 class Window
 {
 public:
@@ -29,6 +31,7 @@ private:
 
     void CreateMenuBar();
     void AddControls();
+    void loadImages();
 };
 
 std::map<HWND, Window*> windowMap;
@@ -69,7 +72,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case 7:
             PasteFileFromClipboard(hWnd);
             break;
-
+        case 8:
+            ShowHelpContent(hWnd);
+            break;
         case 10:
             open_file(hWnd);
             break;
@@ -202,6 +207,7 @@ Window::Window()
     windowMap[m_hWnd] = this;
     CreateMenuBar();
     AddControls();
+    loadImages();
     ShowWindow(m_hWnd, SW_SHOW);
 }
 
@@ -264,8 +270,16 @@ void Window::AddControls()
     HWND hStatic = CreateWindowEx(0, L"static", L"Open your Picture here:", WS_VISIBLE | WS_CHILD | WS_BORDER | SS_CENTER, 200, 100, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
     HWND hEdit = CreateWindowEx(0, L"Edit", L"Edit text here ...", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_MULTILINE, 200, 252, 100, 50, m_hWnd, NULL, m_hInstance, NULL);
     HWND hButton = CreateWindowEx(0, L"button", L"Browse", WS_VISIBLE | WS_CHILD, 200, 152, 100, 50, m_hWnd, (HMENU)10, m_hInstance, NULL);
-    hPictureControl = CreateWindowEx(0, L"static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_CENTERIMAGE, 200, 202, 100, 100, m_hWnd, NULL, m_hInstance, NULL);
+    hPictureControl = CreateWindowEx(0, L"static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP | SS_CENTERIMAGE, 200, 202, 400, 300, m_hWnd, NULL, m_hInstance, NULL);
+    hLogo = CreateWindowEx(0, L"Static", NULL, WS_VISIBLE | WS_CHILD | SS_BITMAP, 350, 60, 100, 100, m_hWnd, NULL, m_hInstance, NULL);
 }
+void Window::loadImages()
+{
+    std::wstring imagePath = L"E:\Prog stuff\Visualstudio\Image_converter\Image_converter\Logo.bmp";
+    HBITMAP hLogoImage = (HBITMAP)LoadImageW(NULL, imagePath.c_str(), IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    SendMessage(hLogo, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hLogoImage);
+}
+
 
 
 BOOL CopyFileToClipboard(HWND hWnd)
@@ -431,4 +445,37 @@ BOOL CutFileFromClipboard(HWND hWnd)
     MessageBox(hWnd, L"Text cut from clipboard.", L"Success", MB_OK | MB_ICONINFORMATION);
 
     return TRUE;
+}
+void ShowHelpContent(HWND hWnd)
+{
+    const wchar_t* helpContent = L" Image Converter \n Made by Oskars \n cc 2023";
+
+    // Create a new window to display the help content
+    HWND hHelpWnd = CreateWindowEx(
+        0,
+        L"STATIC",
+        L"Help",
+        WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 300,
+        NULL,
+        NULL,
+        GetModuleHandle(nullptr),
+        NULL
+    );
+
+    // Create a static control to show the help text
+    HWND hHelpText = CreateWindowEx(
+        0,
+        L"STATIC",
+        helpContent,
+        WS_VISIBLE | WS_CHILD | SS_CENTER,
+        10, 10, 380, 280,
+        hHelpWnd,
+        NULL,
+        GetModuleHandle(nullptr),
+        NULL
+    );
+
+    // Show the help window
+    ShowWindow(hHelpWnd, SW_SHOW);
 }

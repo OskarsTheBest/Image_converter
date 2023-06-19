@@ -15,6 +15,8 @@ public:
 	bool ProcessMessages();
 	void CreateMenuBar();
 	void AddControls();
+	void loadImages();
+	void ShowHelpContent();
 	static LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OpenButtonProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 private:
